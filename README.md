@@ -1,4 +1,3 @@
 # sf_rf
-Apex for Remedyforce
+Force.com code to augment existing BMC Remedyforce features.
 
-Apex created for BMC Remedyforce 
