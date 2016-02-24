@@ -1,0 +1,89 @@
+//Only use the default BMC Remedyforce Profiles and Permission Sets
+Set<String> Profile_PermSet_Set = new Set<String>();
+Profile_PermSet_Set.add('ServiceDesk Staff');
+Profile_PermSet_Set.add('ServiceDesk Client');
+
+//Set some variables that we will use later...
+Map<String,String> Profile_PermSet_Map = new Map<String,String>();
+String rfPermSet;
+String rfProfile;
+
+//get the profiles
+//List
+List<sObject> profile_List = new List<sObject>();
+profile_List = [select id,Name from Profile where Name in :Profile_PermSet_Set];
+
+
+//Map
+Map<String,String> profileMap = new Map<String,String>();
+for(sObject p: profile_List)
+{
+    String profileName = (String)p.get('Name');
+    String profileId = (String)p.get('Id');
+    profileMap.put(profileName,profileId);
+}
+
+//get the permission sets
+//List
+List<sObject> permSet_List = new List<sObject>();
+permSet_List = [select id,Label from PermissionSet where Label in :Profile_PermSet_Set];
+
+
+//Map
+Map<String,String> permissionSetMap = new Map<String,String>();
+for(sObject p: permSet_List)
+{
+    String permSetName = (String)p.get('Label');
+    String permSetId = (String)p.get('Id');
+    permissionSetMap.put(permSetName,permSetId);
+}
+
+//system.debug(profile_List);
+//system.debug(permSet_List);
+//system.debug(profileMap);
+//system.debug(permissionSetMap);
+
+
+//loop through each profile/permission set...
+//find the users that don't have a permission set with a matching profile
+//link the users to the corresponding permission sets
+for(String p: Profile_PermSet_Set)
+{
+	rfPermSet =  permissionSetMap.get(p);
+    rfProfile =  profileMap.get(p);
+    
+    //system.debug('perm: ' + rfPermSet);
+	//system.debug('profile: ' + rfProfile);
+
+List<String> permissionSetUsers = new List<String>();
+List<PermissionSetAssignment> newPermSetAssign = new List<PermissionSetAssignment>();
+
+List<PermissionSetAssignment> psA = new List<PermissionSetAssignment>();
+psA = [	select AssigneeId from PermissionSetAssignment 
+       	where PermissionSetId = :rfPermSet];
+
+for(PermissionSetAssignment ps: psA)
+{
+    permissionSetUsers.add(ps.AssigneeId);
+}
+
+List<User> users = new List<User>();
+users = [	select id from User 
+         	where isActive = true
+         	and ProfileId = :rfProfile
+         	and Id not in:permissionSetUsers
+        ];
+
+system.debug('Found ' + users.size() + ' users in the ' + p + ' profile without a matching permission set!');
+
+for(User u: users)
+{
+    newPermSetAssign.add(new PermissionSetAssignment(PermissionSetId = rfPermSet, AssigneeId = u.Id));
+}
+
+system.debug('Assigning ' + newPermSetAssign.size() + ' users to the ' + p + ' Permission Set. ');
+system.debug('Permission Set links: ' + newPermSetAssign);    
+//insert newPermSetAssign;
+system.debug('Users in the ' + p + ' profile fixed!');
+    
+}
