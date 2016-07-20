@@ -1,0 +1,37 @@
+String ACTION_NAME = 'Notes';
+String NOTE_TEXT = 'This is a note added via code.';
+String QUERY_ACTION	= 'Select Id from BMCServiceDesk__Action__c where Name = :ACTION_NAME';
+
+String actionId;
+String incId	= 'xxx'; //15 or 18-digit Id of Incident
+String userId	= UserInfo.getUserId(); //user that added the Action
+
+DateTime createdTime 	= DateTime.now(); //date of the action.  This time can be in the past.
+
+//get the action id for 'Notes'.  Change the ACTION_NAME value to add a different Action History record.
+List<BMCServiceDesk__Action__c> actionsList = new List<BMCServiceDesk__Action__c>();
+actionsList = Database.query(QUERY_ACTION);
+
+//If the Action Id value is found, add the note.  If Action Id for 'Note' is not found, 
+if(actionsList.size()>0)
+{
+  actionId = actionsList[0].id; //set the Action Id
+  
+  //Create the Incident History object and populate it with required fields
+  BMCServiceDesk__IncidentHistory__c ih = new BMCServiceDesk__IncidentHistory__c();
+      
+  ih.BMCServiceDesk__FKIncident__c = incId;
+  ih.BMCServiceDesk__date__c = createdTime;
+  ih.BMCServiceDesk__FKAction__c = actionId;
+  ih.BMCServiceDesk__FKUser__c=userId;
+  ih.BMCServiceDesk__note__c = NOTE_TEXT;
+
+  insert ih;
+}
+else
+{
+    system.debug('Unable to locate a valid Action ID.');
+}
+	
+
+
