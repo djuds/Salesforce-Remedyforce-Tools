@@ -1,0 +1,47 @@
+public static void insertIncidentHistoryActions(String action, String actionNote, List<BMCServiceDesk__Incident__c> incList)
+    {
+        String ACTION_NAME 		= action;			//'Notes';
+        String NOTE_TEXT 		= actionNote;		//'This is a note added via code.';
+        String QUERY_ACTION		= 'Select Id from BMCServiceDesk__Action__c where Name = :ACTION_NAME';
+        
+        String actionId;
+        
+        String userId	= UserInfo.getUserId(); //user that added the Action
+        
+        DateTime createdTime 	= DateTime.now(); //date of the action.  This time can be in the past.
+        
+        List<BMCServiceDesk__IncidentHistory__c> incHistList = new List<BMCServiceDesk__IncidentHistory__c>();
+        
+        //get the action id for 'Notes'.  Change the ACTION_NAME value to add a different Action History record.
+        List<BMCServiceDesk__Action__c> actionsList = new List<BMCServiceDesk__Action__c>();
+        actionsList = Database.query(QUERY_ACTION);
+        
+        //If the Action Id value is found, add the note.  If Action Id for 'Note' is not found, 
+        if(actionsList.size()>0)
+        {
+            actionId = actionsList[0].id; //set the Action Id
+          
+          	for(BMCServiceDesk__Incident__c i: incList)
+          	{
+                String incId	= i.Id;
+                
+              	BMCServiceDesk__IncidentHistory__c ih = new BMCServiceDesk__IncidentHistory__c();
+              
+              	ih.BMCServiceDesk__FKIncident__c = incId;
+          		ih.BMCServiceDesk__date__c = createdTime;
+            	ih.BMCServiceDesk__FKAction__c = actionId;
+            	ih.BMCServiceDesk__FKUser__c=userId;
+            	ih.BMCServiceDesk__note__c = NOTE_TEXT;
+              
+              	incHistList.add(ih);				//Create the Incident History object and populate it with required fields
+          	}
+          
+            system.debug('Attempting to add this list: '+incHistList);
+			//insert incHistList;
+        }
+        else
+        {
+            system.debug('Unable to locate a valid Action ID.');
+        }
+	
+    }
