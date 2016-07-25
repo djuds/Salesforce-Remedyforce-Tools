@@ -1,0 +1,58 @@
+//the change requests
+String status = 'Opened';
+String stage = 'Withdrawn';
+String[] requestType = new String[]{'RFC','RFM'};
+String template = 'a1uE0000000ZQnGIAW';
+    
+
+String theQuery = 'Select id from BMCServiceDesk__Change_Request__c ';
+
+theQuery += 'where BMCServiceDesk__Status__c = :status';
+theQuery += ' AND Stage__c = :stage';
+theQuery += ' AND Request_Type__c in :requestType';
+theQuery += ' AND BMCServiceDesk__FKTemplate__c = :template';
+
+system.debug(theQuery);
+
+List<BMCServiceDesk__Change_Request__c> chg = new List<BMCServiceDesk__Change_Request__c>();
+chg = Database.Query(theQuery);
+system.debug(chg.size());
+
+//get the change ci link list
+List<BMCServiceDesk__Change_CI_Link__c> ciL = new List<BMCServiceDesk__Change_CI_Link__c>();
+ciL=[Select BMCServiceDesk__FKChange__c, BMCServiceDesk__FKConfiguration_Item__c from BMCServiceDesk__Change_CI_Link__c where BMCServiceDesk__FKChange__c in :chg];
+system.debug(ciL.size());
+
+List<String> filteredCIList = new List<String>();
+for(BMCServiceDesk__Change_CI_Link__c c: ciL)
+{
+    filteredCIList.add(c.BMCServiceDesk__FKConfiguration_Item__c);
+}
+
+
+
+//get the list of CIs from Base Element.  Store ID and Version# 
+List<BMCServiceDesk__BMC_BaseElement__c> ciList = new List<BMCServiceDesk__BMC_BaseElement__c>();
+ciList = [select id, BMCServiceDesk__Version_Number__c from BMCServiceDesk__BMC_BaseElement__c where id in :filteredCIList ];
+system.debug('ciList: '+ciList.size());
+
+//create a Map of the ID and Version#
+Map<String,String> filteredCIMap = new Map<String,String>();
+for(BMCServiceDesk__BMC_BaseElement__c ci: ciList)
+{
+    filteredCIMap.put(ci.id,ci.BMCServiceDesk__Version_Number__c);
+}
+
+//Loop through ciL and create Change Records to update.
+List<BMCServiceDesk__Change_Request__c> crUpdates = new List<BMCServiceDesk__Change_Request__c>();
+
+for(BMCServiceDesk__Change_CI_Link__c link: ciL)
+{
+    BMCServiceDesk__Change_Request__c cr = new BMCServiceDesk__Change_Request__c();
+    cr.Id = link.BMCServiceDesk__FKChange__c;
+    cr.Version_Number__c = filteredCIMap.get(link.BMCServiceDesk__FKConfiguration_Item__c); 
+    crUpdates.add(cr);
+}
+
+system.debug('# of items to update: '+crUpdates.size());
+//update crUpdates;
